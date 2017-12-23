@@ -12,7 +12,7 @@ public func configure(
 ) throws {
     // configure your application here
     
-    print(ProcessInfo().environment["DB_MYSQL_BATHROOMDB"])
+//    print(ProcessInfo().environment["DB_MYSQL_BATHROOMDB"])
     let directoryConfig = DirectoryConfig.default()
     services.instance(directoryConfig)
     
@@ -22,11 +22,12 @@ public func configure(
     
     var databaseConfig = DatabaseConfig()
     
-    let username = "root"
-    let password = "pass"
+    let username = "dbae11482d5c44"
+    let password = "12e1b4f5006073fc"
     let database = "bathroom"
+    let port: UInt16 = 1514
     
-    let db = MySQLDatabase(hostname: "localhost", user: username, password: password, database: database)
+    let db = MySQLDatabase(hostname: "database-test1.Ldy57S.db.eu.vapor.cloud", port: port, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
     services.instance(databaseConfig)
     
