@@ -11,8 +11,6 @@ public func configure(
     _ services: inout Services
 ) throws {
     // configure your application here
-    
-//    print(ProcessInfo().environment["DB_MYSQL_BATHROOMDB"])
     let directoryConfig = DirectoryConfig.default()
     services.instance(directoryConfig)
     
@@ -22,12 +20,20 @@ public func configure(
     
     var databaseConfig = DatabaseConfig()
     
-    let username = "dbae11482d5c44"
-    let password = "12e1b4f5006073fc"
-    let database = "dbae11482d5c44"
-    let port: UInt16 = 1514
+    var (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
     
-    let db = MySQLDatabase(hostname: "database-test1.Ldy57S.db.eu.vapor.cloud", port: port, user: username, password: password, database: database)
+    if let databaseURL = ProcessInfo().environment["DATABASE_URL"] {
+        let tokens = databaseURL
+            .replacingOccurrences(of: "mysql://", with: "")
+            .replacingOccurrences(of: "?reconnect=true", with: "")
+            .split { ["@", "/", ":"].contains(String($0)) }
+        
+        (username, password, host, database) = (String(tokens[0]), String(tokens[1]), String(tokens[2]), String(tokens[3]))
+    }
+    
+    print(username, password, host, database)
+    
+    let db = MySQLDatabase(hostname: "localhost", user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
     services.instance(databaseConfig)
     
