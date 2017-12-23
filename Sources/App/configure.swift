@@ -22,7 +22,7 @@ public func configure(
     
     var (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
     
-    if let databaseURL = ProcessInfo().environment["DATABASE_URL"] {
+    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"] {
         let tokens = databaseURL
             .replacingOccurrences(of: "mysql://", with: "")
             .replacingOccurrences(of: "?reconnect=true", with: "")
