@@ -24,7 +24,7 @@ public func configure(
     
     let username = "dbae11482d5c44"
     let password = "12e1b4f5006073fc"
-    let database = "bathroom"
+    let database = "dbae11482d5c44"
     let port: UInt16 = 1514
     
     let db = MySQLDatabase(hostname: "database-test1.Ldy57S.db.eu.vapor.cloud", port: port, user: username, password: password, database: database)
