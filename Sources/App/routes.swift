@@ -17,6 +17,8 @@ final class Routes: RouteCollection {
                 currentSession.length = Date().timeIntervalSince1970 - currentSession.date.timeIntervalSince1970
                 app.withConnection(to: .sqlite) { (db) -> Future<BathroomSession> in
                     self.currentSession.save(on: db).transform(to: self.currentSession)
+                }.catch {
+                    print($0)
                 }
             } else {
                 currentSession = BathroomSession()
