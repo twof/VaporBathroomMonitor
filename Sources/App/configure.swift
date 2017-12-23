@@ -18,7 +18,7 @@ public func configure(
     try services.provider(SQLiteProvider())
     
     var databaseConfig = DatabaseConfig()
-    let db = SQLiteDatabase(storage: .file(path: "/Users/fnord/Documents/sqlite/test.db"))
+    let db = SQLiteDatabase(storage: .file(path: "\(directoryConfig.workDir)example.db"))
     databaseConfig.add(database: db, as: .sqlite)
     services.instance(databaseConfig)
     
