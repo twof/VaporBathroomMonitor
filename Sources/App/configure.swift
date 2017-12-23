@@ -33,7 +33,7 @@ public func configure(
     
     print(username, password, host, database)
     
-    let db = MySQLDatabase(hostname: "localhost", user: username, password: password, database: database)
+    let db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
     services.instance(databaseConfig)
     
