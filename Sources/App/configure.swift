@@ -11,6 +11,8 @@ public func configure(
     _ services: inout Services
 ) throws {
     // configure your application here
+    
+    print(ProcessInfo().environment["DB_MYSQL_BATHROOMDB"])
     let directoryConfig = DirectoryConfig.default()
     services.instance(directoryConfig)
     
