@@ -1,5 +1,5 @@
 import Foundation
-import FluentSQLite
+import FluentMySQL
 import Vapor
 
 final class Reservation: Content {
@@ -14,10 +14,10 @@ final class Reservation: Content {
 }
 
 extension Reservation: Model, Migration {
-    typealias Database = SQLiteDatabase
+    typealias Database = MySQLDatabase
     typealias ID = UUID
-    
-    static var idKey: ReferenceWritableKeyPath<BathroomSession, UUID?> {
+
+    static var idKey: ReferenceWritableKeyPath<Reservation, UUID?> {
         return \.id
     }
 }

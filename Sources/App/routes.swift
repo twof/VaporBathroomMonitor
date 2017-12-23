@@ -2,7 +2,7 @@ import Routing
 import Vapor
 import Foundation
 import HTTP
-import FluentSQLite
+import FluentMySQL
 /// Register your application's routes here.
 ///
 /// [Learn More →](https://docs.vapor.codes/3.0/getting-started/structure/#routesswift)
@@ -15,7 +15,7 @@ final class Routes: RouteCollection {
         didSet {
             if oldValue == true {
                 currentSession.length = Date().timeIntervalSince1970 - currentSession.date.timeIntervalSince1970
-                app.withConnection(to: .sqlite) { (db) -> Future<BathroomSession> in
+                app.withConnection(to: .mysql) { (db) -> Future<BathroomSession> in
                     self.currentSession.save(on: db).transform(to: self.currentSession)
                 }.catch {
                     print($0)
@@ -57,7 +57,7 @@ final class Routes: RouteCollection {
         
         /// returns the BathroomSession with the longest time
         router.get("highScore") { (req) -> Future<BathroomSession> in
-            return req.withConnection(to: .sqlite) { (db: SQLiteConnection) in
+            return req.withConnection(to: .mysql) { (db: FluentMySQLConnection) in
                 return try db
                     .query(BathroomSession.self)
                     .sort(\BathroomSession.length, QuerySortDirection.descending)
@@ -66,7 +66,7 @@ final class Routes: RouteCollection {
                         guard let session = session else {
                             throw Abort(.notFound, reason: "Could not find parking.")
                         }
-                        
+
                         return session
                 }
             }

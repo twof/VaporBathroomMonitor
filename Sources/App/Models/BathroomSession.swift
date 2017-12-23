@@ -1,5 +1,5 @@
 import Foundation
-import FluentSQLite
+import FluentMySQL
 import Vapor
 
 final class BathroomSession: Content {
@@ -14,7 +14,7 @@ final class BathroomSession: Content {
 }
 
 extension BathroomSession: Model, Migration {
-    typealias Database = SQLiteDatabase
+    typealias Database = MySQLDatabase
     typealias ID = UUID
     
     static var idKey: ReferenceWritableKeyPath<BathroomSession, UUID?> {

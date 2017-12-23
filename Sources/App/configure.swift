@@ -1,5 +1,5 @@
 import Vapor
-import FluentSQLite
+import FluentMySQL
 import Foundation
 
 /// Called before your application initializes.
@@ -15,20 +15,26 @@ public func configure(
     services.instance(directoryConfig)
     
     try services.provider(FluentProvider())
-    try services.provider(SQLiteProvider())
+    
+    services.instance(FluentMySQLConfig())
     
     var databaseConfig = DatabaseConfig()
-    let db = SQLiteDatabase(storage: .file(path: "\(directoryConfig.workDir)example.db"))
-    databaseConfig.add(database: db, as: .sqlite)
+    
+    let username = "root"
+    let password = "pass"
+    let database = "bathroom"
+    
+    let db = MySQLDatabase(hostname: "localhost", user: username, password: password, database: database)
+    databaseConfig.add(database: db, as: .mysql)
     services.instance(databaseConfig)
     
     var migrationConfig = MigrationConfig()
-    migrationConfig.add(model: BathroomSession.self, database: .sqlite)
+    migrationConfig.add(model: BathroomSession.self, database: .mysql)
     services.instance(migrationConfig)
 }
 
 extension DatabaseIdentifier {
-    static var sqlite: DatabaseIdentifier<SQLiteDatabase> {
-        return .init("sqlite")
+    static var mysql: DatabaseIdentifier<MySQLDatabase> {
+        return .init("mysql")
     }
 }
