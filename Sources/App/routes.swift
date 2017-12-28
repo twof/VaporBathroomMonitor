@@ -6,7 +6,7 @@ import FluentMySQL
 /// Register your application's routes here.
 ///
 /// [Learn More →](https://docs.vapor.codes/3.0/getting-started/structure/#routesswift)
-final class Routes: RouteCollection {
+public final class Routes: RouteCollection {
     /// Use this to create any services you may
     /// need for your routes.
     let app: Application
@@ -34,7 +34,7 @@ final class Routes: RouteCollection {
     }
 
     /// See RouteCollection.boot
-    func boot(router: Router) throws {
+    public func boot(router: Router) throws {
         router.get("hello") { req in
             return Future("Hello, world!")
         }
