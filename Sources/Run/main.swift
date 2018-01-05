@@ -11,7 +11,7 @@ var serverConfig: EngineServerConfig = EngineServerConfig()
 
 if let portString = ProcessInfo.processInfo.environment["PORT"],
     let port = UInt16(portString) {
-    serverConfig = EngineServerConfig(port: port)
+    serverConfig = EngineServerConfig(hostname: "0.0.0.0", port: port)
     services.register { container in
         return serverConfig
     }
