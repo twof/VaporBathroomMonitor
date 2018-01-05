@@ -17,7 +17,6 @@ if let portString = ProcessInfo.processInfo.environment["PORT"],
     }
 }
 
-
 try App.configure(&config, &env, &services)
 
 let app = try Application(

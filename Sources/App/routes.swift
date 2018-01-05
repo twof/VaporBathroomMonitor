@@ -57,7 +57,7 @@ public final class Routes: RouteCollection {
         
         /// returns the BathroomSession with the longest time
         router.get("highScore") { (req) -> Future<BathroomSession> in
-            return req.withConnection(to: .mysql) { (db: FluentMySQLConnection) in
+            return req.withConnection(to: .mysql) { (db: MySQLConnection) in
                 return try db
                     .query(BathroomSession.self)
                     .sort(\BathroomSession.length, QuerySortDirection.descending)

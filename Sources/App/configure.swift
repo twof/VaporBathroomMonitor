@@ -12,11 +12,11 @@ public func configure(
 ) throws {
     // configure your application here
     let directoryConfig = DirectoryConfig.default()
-    services.instance(directoryConfig)
+    services.use(directoryConfig)
     
-    try services.provider(FluentProvider())
+    try services.register(FluentProvider())
     
-    services.instance(FluentMySQLConfig())
+    services.use(FluentMySQLConfig())
     
     var databaseConfig = DatabaseConfig()
     
@@ -35,11 +35,11 @@ public func configure(
     
     let db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
-    services.instance(databaseConfig)
+    services.use(databaseConfig)
     
     var migrationConfig = MigrationConfig()
     migrationConfig.add(model: BathroomSession.self, database: .mysql)
-    services.instance(migrationConfig)
+    services.use(migrationConfig)
 }
 
 extension DatabaseIdentifier {
