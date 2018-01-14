@@ -15,6 +15,7 @@ final class BathroomSession: Content {
 
 extension BathroomSession: Model, Migration {
     typealias Database = MySQLDatabase
+    typealias ID = UUID
     
     static var idKey: ReferenceWritableKeyPath<BathroomSession, UUID?> {
         return \.id

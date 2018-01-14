@@ -10,7 +10,9 @@ public func configure(
     _ env: inout Environment,
     _ services: inout Services
 ) throws {
-    // configure your application here
+    
+//    services.use(EngineServerConfig.heroku())
+    
     let directoryConfig = DirectoryConfig.default()
     services.use(directoryConfig)
     
@@ -19,7 +21,6 @@ public func configure(
     services.use(FluentMySQLConfig())
     
     var databaseConfig = DatabaseConfig()
-    
     var (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
     
     if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"] {
@@ -31,7 +32,7 @@ public func configure(
         (username, password, host, database) = (String(tokens[0]), String(tokens[1]), String(tokens[2]), String(tokens[3]))
     }
     
-    print(username, password, host, database)
+    print("using local db")
     
     let db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
@@ -39,6 +40,7 @@ public func configure(
     
     var migrationConfig = MigrationConfig()
     migrationConfig.add(model: BathroomSession.self, database: .mysql)
+    migrationConfig.add(model: Reservation.self, database: .mysql)
     services.use(migrationConfig)
 }
 

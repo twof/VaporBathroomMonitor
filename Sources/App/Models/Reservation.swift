@@ -15,8 +15,7 @@ final class Reservation: Content {
 
 extension Reservation: Model, Migration {
     typealias Database = MySQLDatabase
-    typealias ID = UUID
-
+    
     static var idKey: ReferenceWritableKeyPath<Reservation, UUID?> {
         return \.id
     }

@@ -71,5 +71,57 @@ public final class Routes: RouteCollection {
                 }
             }
         }
+        
+        router.delete("reservation") { (req) -> Future<Reservation> in
+            guard let userName: String = try req.content.get(at: ["user"]) else {
+                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
+            }
+            
+            return try Reservation
+                .query(on: req)
+                .filter(\Reservation.user == userName)
+                .first()
+                .flatMap(to: Reservation.self) { (reservation) in
+                    guard let reservation = reservation else {
+                        throw Abort(.notFound, reason: "Could not find user.")
+                    }
+                    
+                    return reservation.delete(on: req).transform(to: reservation)
+                }
+        }
+        
+        router.post("reservation") { (req) -> Future<Reservation> in
+            if !self.bathroomOccupied {
+                
+            }
+            
+            guard let userName: String = try req.content.get(at: ["user"]) else {
+                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
+            }
+            
+            let newReservation = Reservation(user: userName)
+            
+            return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
+        }
+        
+        router.get("nextReservation") { (req) -> Future<Reservation> in
+            return try Reservation
+                .query(on: req)
+                .sort(\Reservation.date, .ascending)
+                .first()
+                .flatMap(to: Reservation.self) { (reservation) in
+                    guard let reservation = reservation else {
+                        throw Abort(.notFound, reason: "No reservations found")
+                    }
+                    
+                    return Future(reservation)
+            }
+        }
+        
+        router.get("allReservations") { (req) -> Future<[Reservation]> in
+            return Reservation.query(on: req).all()
+        }
     }
 }
+
+extension Request: DatabaseConnectable {}
