@@ -10,15 +10,8 @@ public func configure(
     _ env: inout Environment,
     _ services: inout Services
 ) throws {
-    
-//    services.use(EngineServerConfig.heroku())
-    
-    let directoryConfig = DirectoryConfig.default()
-    services.use(directoryConfig)
-    
-    try services.register(FluentProvider())
-    
-    services.use(FluentMySQLConfig())
+    try services.register(EngineServerConfig.detect())
+    try services.register(FluentMySQLProvider())
     
     var databaseConfig = DatabaseConfig()
     var (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
@@ -36,12 +29,12 @@ public func configure(
     
     let db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
-    services.use(databaseConfig)
+    services.register(databaseConfig)
     
     var migrationConfig = MigrationConfig()
     migrationConfig.add(model: BathroomSession.self, database: .mysql)
     migrationConfig.add(model: Reservation.self, database: .mysql)
-    services.use(migrationConfig)
+    services.register(migrationConfig)
 }
 
 extension DatabaseIdentifier {

@@ -50,6 +50,7 @@ public final class Routes: RouteCollection {
         
         /// retreieves whether or not the bathroom is available
         router.get("isAvailable") { (req) -> Future<Response>  in
+           
             let res: Response = Response(using: req)
             try res.content.encode(["isOccupied":self.bathroomOccupied], as: .json)
             return Future(res)
@@ -58,7 +59,7 @@ public final class Routes: RouteCollection {
         /// returns the BathroomSession with the longest time
         router.get("highScore") { (req) -> Future<BathroomSession> in
             return req.withConnection(to: .mysql) { (db: MySQLConnection) in
-                return try db
+                return db
                     .query(BathroomSession.self)
                     .sort(\BathroomSession.length, QuerySortDirection.descending)
                     .first()
@@ -72,12 +73,22 @@ public final class Routes: RouteCollection {
             }
         }
         
+        router.get("allSessions") { (req) -> Future<[BathroomSession]> in
+            let allSessionsFuture =  BathroomSession
+                .query(on: req)
+                .all()
+            
+            allSessionsFuture.catch { print("allSesssions error: ", $0) }
+            
+            return allSessionsFuture
+        }
+        
         router.delete("reservation") { (req) -> Future<Reservation> in
             guard let userName: String = try req.content.get(at: ["user"]) else {
                 throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
             }
             
-            return try Reservation
+            return Reservation
                 .query(on: req)
                 .filter(\Reservation.user == userName)
                 .first()
@@ -105,7 +116,7 @@ public final class Routes: RouteCollection {
         }
         
         router.get("nextReservation") { (req) -> Future<Reservation> in
-            return try Reservation
+            return Reservation
                 .query(on: req)
                 .sort(\Reservation.date, .ascending)
                 .first()
@@ -123,5 +134,3 @@ public final class Routes: RouteCollection {
         }
     }
 }
-
-extension Request: DatabaseConnectable {}
