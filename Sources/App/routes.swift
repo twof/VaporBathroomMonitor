@@ -59,18 +59,15 @@ public final class Routes: RouteCollection {
         /// returns the BathroomSession with the longest time
         router.get("highScore") { (req) -> Future<BathroomSession> in
             return req.withConnection(to: .mysql) { (db: MySQLConnection) in
-                return db
+                db
                     .query(BathroomSession.self)
-                    .sort(\BathroomSession.length, QuerySortDirection.descending)
-                    .first()
-                    .map(to: BathroomSession.self) { (session) in
-                        guard let session = session else {
-                            throw Abort(.notFound, reason: "Could not find parking.")
-                        }
-
-                        return session
+                    .max(\BathroomSession.length)
+                    .flatMap(to: BathroomSession?.self) { (maxVal) in
+                        return db
+                            .query(BathroomSession.self)
+                            .filter(\BathroomSession.length == maxVal).first()
+                    }.unwrap(or: Abort(.notFound, reason: "No BathroomSessions in DB"))
                 }
-            }
         }
         
         router.get("allSessions") { (req) -> Future<[BathroomSession]> in
@@ -83,7 +80,7 @@ public final class Routes: RouteCollection {
             return allSessionsFuture
         }
         
-        router.delete("reservation") { (req) -> Future<Reservation> in
+        router.delete("reservation") { (req) -> Future<HTTPStatus> in
             guard let userName: String = try req.content.get(at: ["user"]) else {
                 throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
             }
@@ -92,12 +89,9 @@ public final class Routes: RouteCollection {
                 .query(on: req)
                 .filter(\Reservation.user == userName)
                 .first()
-                .flatMap(to: Reservation.self) { (reservation) in
-                    guard let reservation = reservation else {
-                        throw Abort(.notFound, reason: "Could not find user.")
-                    }
-                    
-                    return reservation.delete(on: req).transform(to: reservation)
+                .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
+                .map(to: HTTPStatus.self) { _ in
+                    return .ok
                 }
         }
         
@@ -134,3 +128,25 @@ public final class Routes: RouteCollection {
         }
     }
 }
+
+//protocol OptionalType { }
+//
+//extension Optional: OptionalType {}
+//
+//extension Future<Optional<T>> {
+//
+//}
+//
+//extension Future where T: Optional {
+//    func unwrapOrAbort<Unwrapped>(to: Unwrapped.Type, _ status: HTTPStatus, reason: String?=nil, identifier: String?=nil) throws -> Future<Unwrapped> {
+//        return self.map(to: Unwrapped.self) { (input) -> Unwrapped in
+//
+//            if input == nil {
+//                throw Abort(status, reason: reason, identifier: identifier)
+//            }
+//
+//            return input as! Unwrapped
+//        }
+//    }
+//}
+
