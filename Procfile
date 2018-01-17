@@ -1,1 +1,1 @@
-web: Run --env=production
+web: Run --env prod --hostname 0.0.0.0
