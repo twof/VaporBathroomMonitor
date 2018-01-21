@@ -82,21 +82,14 @@ public final class Routes: RouteCollection {
             return allSessionsFuture
         }
         
-//        router.delete("reservation") { (req) -> Future<HTTPStatus> in
-//            guard let userName: String = try req.content.get(at: ["user"]) else {
-//                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
-//            }
-//
-//            return Reservation
-//                .query(on: req)
-//                .filter(\Reservation.user == userName)
-//                .first()
-//                .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
-//                .map(to: HTTPStatus.self) { _ in
-//                    return .ok
-//                }
-//        }
-//
+        router.delete("reservation") { (req) -> Future<Response> in
+            return try req.content["user"]
+                .unwrap(or: Abort(.badRequest, reason: "Missing user field in body"))
+                .flatMap(to: HTTPStatus.self) { (userName) in
+                    return self.deleteReservation(using: req, withName: userName)
+                }.encode(for: req)
+        }
+        
 //        router.post("reservation") { (req) -> Future<Reservation> in
 //            if !self.bathroomOccupied {
 //
@@ -129,26 +122,17 @@ public final class Routes: RouteCollection {
             return Reservation.query(on: req).all()
         }
     }
+    
+    func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) -> Future<HTTPStatus> {
+        return Reservation
+            .query(on: databaseConnectable)
+            .filter(\Reservation.user == userName)
+            .first()
+            .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
+            .map(to: HTTPStatus.self) { _ in
+                return .ok
+        }
+    }
 }
 
-//protocol OptionalType { }
-//
-//extension Optional: OptionalType {}
-//
-//extension Future<Optional<T>> {
-//
-//}
-//
-//extension Future where T: Optional {
-//    func unwrapOrAbort<Unwrapped>(to: Unwrapped.Type, _ status: HTTPStatus, reason: String?=nil, identifier: String?=nil) throws -> Future<Unwrapped> {
-//        return self.map(to: Unwrapped.self) { (input) -> Unwrapped in
-//
-//            if input == nil {
-//                throw Abort(status, reason: reason, identifier: identifier)
-//            }
-//
-//            return input as! Unwrapped
-//        }
-//    }
-//}
 
