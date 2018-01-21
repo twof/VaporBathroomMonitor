@@ -40,12 +40,14 @@ public final class Routes: RouteCollection {
         }
         
         /// updates isOccupied
-        router.post("update") { (req) -> Future<String> in
-            guard let isOccupied: Bool = try? req.content.get(at: ["occupied"]) else {
-                throw Abort(.badRequest, reason: "Bad JSON data. Expected boolean \"occupied\" field")
-            }
-            self.bathroomOccupied = isOccupied
-            return Future(String(describing: self.bathroomOccupied))
+        router.post("update") { (req) -> Future<Response> in
+            return try req.content["occupied"]
+                .unwrap(or: Abort(.badRequest, reason: "Missing occupied field in body"))
+                .do { isOccupied in
+                    self.bathroomOccupied = isOccupied
+                }.map(to: HTTPStatus.self) { _ in
+                    return .ok
+                }.encode(for: req)
         }
         
         /// retreieves whether or not the bathroom is available
@@ -80,34 +82,34 @@ public final class Routes: RouteCollection {
             return allSessionsFuture
         }
         
-        router.delete("reservation") { (req) -> Future<HTTPStatus> in
-            guard let userName: String = try req.content.get(at: ["user"]) else {
-                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
-            }
-            
-            return Reservation
-                .query(on: req)
-                .filter(\Reservation.user == userName)
-                .first()
-                .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
-                .map(to: HTTPStatus.self) { _ in
-                    return .ok
-                }
-        }
-        
-        router.post("reservation") { (req) -> Future<Reservation> in
-            if !self.bathroomOccupied {
-                
-            }
-            
-            guard let userName: String = try req.content.get(at: ["user"]) else {
-                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
-            }
-            
-            let newReservation = Reservation(user: userName)
-            
-            return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
-        }
+//        router.delete("reservation") { (req) -> Future<HTTPStatus> in
+//            guard let userName: String = try req.content.get(at: ["user"]) else {
+//                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
+//            }
+//
+//            return Reservation
+//                .query(on: req)
+//                .filter(\Reservation.user == userName)
+//                .first()
+//                .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
+//                .map(to: HTTPStatus.self) { _ in
+//                    return .ok
+//                }
+//        }
+//
+//        router.post("reservation") { (req) -> Future<Reservation> in
+//            if !self.bathroomOccupied {
+//
+//            }
+//
+//            guard let userName: String = try req.content.get(at: ["user"]) else {
+//                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
+//            }
+//
+//            let newReservation = Reservation(user: userName)
+//
+//            return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
+//        }
         
         router.get("nextReservation") { (req) -> Future<Reservation> in
             return Reservation
