@@ -95,13 +95,13 @@ public final class Routes: RouteCollection {
 //
 //            }
 //
-//            guard let userName: String = try req.content.get(at: ["user"]) else {
-//                throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
-//            }
+//                guard let userName: String = try req.content.get(at: ["user"]) else {
+//                    throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
+//                }
 //
-//            let newReservation = Reservation(user: userName)
+//                let newReservation = Reservation(user: userName)
 //
-//            return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
+//                return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
 //        }
         
         router.get("nextReservation") { (req) -> Future<Reservation> in
