@@ -81,6 +81,10 @@ public final class Routes: RouteCollection {
             return allSessionsFuture
         }
         
+        router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
+            return try req.parameter(BathroomSession.self)
+        }
+        
 //        router.delete("reservation") { (req) -> Future<Response> in
 //            return try req.content["user"]
 //                .unwrap(or: Abort(.badRequest, reason: "Missing user field in body"))

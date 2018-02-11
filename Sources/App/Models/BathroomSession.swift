@@ -13,11 +13,10 @@ final class BathroomSession: Content {
     }
 }
 
-extension BathroomSession: Model, Migration {
-    typealias Database = MySQLDatabase
-    typealias ID = UUID
-    
+extension BathroomSession: MySQLModel, Migration {
     static var idKey: ReferenceWritableKeyPath<BathroomSession, UUID?> {
         return \.id
     }
 }
+
+extension BathroomSession: Parameter {}
