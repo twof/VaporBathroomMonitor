@@ -25,8 +25,6 @@ public func configure(
         (username, password, host, database) = (String(tokens[0]), String(tokens[1]), String(tokens[2]), String(tokens[3]))
     }
     
-    print("using local db")
-    
     let db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
     services.register(databaseConfig)

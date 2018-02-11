@@ -2,7 +2,7 @@ import Foundation
 import FluentMySQL
 import Vapor
 
-final class Reservation: Content {
+public final class Reservation: Content {
     public var id: UUID?
     public var user: String
     public var date: Date
@@ -14,9 +14,9 @@ final class Reservation: Content {
 }
 
 extension Reservation: Model, Migration {
-    typealias Database = MySQLDatabase
+    public typealias Database = MySQLDatabase
     
-    static var idKey: ReferenceWritableKeyPath<Reservation, UUID?> {
+    public static var idKey: ReferenceWritableKeyPath<Reservation, UUID?> {
         return \.id
     }
 }
