@@ -14,18 +14,15 @@ public func configure(
     try services.register(FluentMySQLProvider())
     
     var databaseConfig = DatabaseConfig()
-    var (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
+    let db: MySQLDatabase   
     
-    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"] {
-        let tokens = databaseURL
-            .replacingOccurrences(of: "mysql://", with: "")
-            .replacingOccurrences(of: "?reconnect=true", with: "")
-            .split { ["@", "/", ":"].contains(String($0)) }
-        
-        (username, password, host, database) = (String(tokens[0]), String(tokens[1]), String(tokens[2]), String(tokens[3]))
-    }
+//    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"] {
+//        db = MySQLDatabase(databaseURL: databaseURL)
+//    } else {
+        let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
+        db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
+//    }
     
-    let db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
     databaseConfig.add(database: db, as: .mysql)
     services.register(databaseConfig)
     

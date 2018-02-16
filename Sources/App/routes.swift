@@ -81,8 +81,22 @@ public final class Routes: RouteCollection {
             return allSessionsFuture
         }
         
-        router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
-            return try req.parameter(BathroomSession.self)
+//        router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
+//            return try req.parameter(BathroomSession.self)
+//        }
+        
+        router.get("session", UUID.parameter) { (req) -> Future<Response> in // Take in a request
+            let sessionID = try req.parameter(UUID.self) // Turn that request into an ID
+            
+            return try BathroomSession
+                .find(sessionID, on: req) // Use that ID to search the database for a row, turn that row into an (optional) object
+                .map(to: BathroomSession.self) { (session) in // Unwrap the object
+                    guard let session = session else {throw Abort(.notFound, reason: "User Not Found")}
+                    return session
+                }.map(to: BathroomSession.self) { (session) in // Make some change to the object
+                    session.date = Date()
+                    return session
+                }.encode(for: req) // Turn that object into a response, and return that response
         }
         
 //        router.delete("reservation") { (req) -> Future<Response> in
