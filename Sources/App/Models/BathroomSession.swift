@@ -2,7 +2,7 @@ import Foundation
 import FluentMySQL
 import Vapor
 
-final class BathroomSession: Content {
+final public class BathroomSession: Content {
     public var id: UUID?
     public var date: Date
     public var length: Double
@@ -14,7 +14,7 @@ final class BathroomSession: Content {
 }
 
 extension BathroomSession: MySQLModel, Migration {
-    static var idKey: ReferenceWritableKeyPath<BathroomSession, UUID?> {
+    public static var idKey: WritableKeyPath<BathroomSession, UUID?> {
         return \.id
     }
 }

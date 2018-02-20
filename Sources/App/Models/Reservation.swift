@@ -13,10 +13,8 @@ public final class Reservation: Content {
     }
 }
 
-extension Reservation: Model, Migration {
-    public typealias Database = MySQLDatabase
-    
-    public static var idKey: ReferenceWritableKeyPath<Reservation, UUID?> {
+extension Reservation: MySQLModel, Migration {
+    public static var idKey: WritableKeyPath<Reservation, UUID?> {
         return \.id
     }
 }

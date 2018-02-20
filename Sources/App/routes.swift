@@ -85,18 +85,12 @@ public final class Routes: RouteCollection {
 //            return try req.parameter(BathroomSession.self)
 //        }
         
-        router.get("session", UUID.parameter) { (req) -> Future<Response> in // Take in a request
-            let sessionID = try req.parameter(UUID.self) // Turn that request into an ID
+        router.get("session", BathroomSession.parameter) { (req) -> Future<Response> in // Take in a request
+            let bathroomSession = try req.parameter(BathroomSession.self) // Turn that request into an ID
             
-            return try BathroomSession
-                .find(sessionID, on: req) // Use that ID to search the database for a row, turn that row into an (optional) object
-                .map(to: BathroomSession.self) { (session) in // Unwrap the object
-                    guard let session = session else {throw Abort(.notFound, reason: "User Not Found")}
-                    return session
-                }.map(to: BathroomSession.self) { (session) in // Make some change to the object
-                    session.date = Date()
-                    return session
-                }.encode(for: req) // Turn that object into a response, and return that response
+            return try bathroomSession
+                .changeName(to: "Jamie")
+                .encode(for: req) // Turn that object into a response, and return that response
         }
         
 //        router.delete("reservation") { (req) -> Future<Response> in
@@ -172,6 +166,15 @@ extension QueryBuilder {
     func aside(_ closure: (QueryBuilder) -> ()) -> Self {
         closure(self)
         return self
+    }
+}
+
+extension Future where T == BathroomSession {
+    public func changeName(to: String) -> Future<Expectation> {
+        return self.map(to: BathroomSession.self) { (user) in
+            user.date = Date()
+            return user
+        }
     }
 }
 

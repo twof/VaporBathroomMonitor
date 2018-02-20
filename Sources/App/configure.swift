@@ -16,13 +16,14 @@ public func configure(
     var databaseConfig = DatabaseConfig()
     let db: MySQLDatabase   
     
-//    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"] {
-//        db = MySQLDatabase(databaseURL: databaseURL)
-//    } else {
+    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
+        let database = MySQLDatabase(databaseURL: databaseURL) {
+        db = database
+    } else {
         let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
         db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
-//    }
-    
+    }
+
     databaseConfig.add(database: db, as: .mysql)
     services.register(databaseConfig)
     
