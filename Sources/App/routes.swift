@@ -3,6 +3,7 @@ import Vapor
 import Foundation
 import HTTP
 import FluentMySQL
+import FluentSQLite
 /// Register your application's routes here.
 ///
 /// [Learn More →](https://docs.vapor.codes/3.0/getting-started/structure/#routesswift)
@@ -52,6 +53,7 @@ public final class Routes: RouteCollection {
         
         /// retreieves whether or not the bathroom is available
         router.get("isAvailable") { (req) -> Future<Response>  in
+            let ses = BathroomSession(date: Date(), length: 10)
             let res: Response = Response(using: req)
             try res.content.encode(["isOccupied":self.bathroomOccupied], as: .json)
             return Future(res)
@@ -148,17 +150,29 @@ public final class Routes: RouteCollection {
     }
     
     func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
-        
+        final class Bar: SQLiteModel {
+            var id: Int?
+            var name: String
+        }
         return Reservation
             .query(on: databaseConnectable)
             .filter(\Reservation.user == userName)
-            .validNumberOfReservationsInDatabase()
             .first()
             .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
             .delete(on: databaseConnectable)
             .map(to: HTTPStatus.self) { _ in
                 return .ok
             }
+    }
+}
+
+extension Future {
+    func join<S>(otherFuture: Future<S>) -> Future<(T, S)> {
+        return self.flatMap(to: (T, S).self, { (thisExpectation: T) -> Future<(T, S)> in
+            return otherFuture.map(to: (T, S).self, { (otherExpectation: S) in
+                return (thisExpectation, otherExpectation)
+            })
+        })
     }
 }
 
@@ -298,6 +312,14 @@ extension Future {
         return self
     }
 }
+
+extension Content {
+    public func json() throws -> Data {
+        let encoder = JSONEncoder()
+        return try encoder.encode(self)
+    }
+}
+
 
 extension Future where T: Model, T.Database: QuerySupporting {
     public func delete(on connectable: DatabaseConnectable) -> Future<T> {
