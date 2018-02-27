@@ -4,160 +4,161 @@ import Foundation
 import HTTP
 import FluentMySQL
 
-/// Register your application's routes here.
-///
-/// [Learn More →](https://docs.vapor.codes/3.0/getting-started/structure/#routesswift)
-public final class Routes: RouteCollection {
-    /// Use this to create any services you may
-    /// need for your routes.
-    let app: Application
-    
-    var bathroomOccupied = false {
-        didSet {
-            if oldValue == true {
-                currentSession.length = Date().timeIntervalSince1970 - currentSession.date.timeIntervalSince1970
-                app.withConnection(to: .mysql) { (db) -> Future<BathroomSession> in
-                    self.currentSession.save(on: db).transform(to: self.currentSession)
-                }.catch {
-                    print($0)
-                }
-            } else {
-                currentSession = BathroomSession()
-            }
-        }
-    }
-    var currentSession: BathroomSession = BathroomSession()
-
-    /// Create a new Routes collection with
-    /// the supplied application.
-    init(app: Application) {
-        self.app = app
-    }
-
-    /// See RouteCollection.boot
-    public func boot(router: Router) throws {
-        router.get("hello") { req -> Future<String> in
-            return Future("Hello, world!")
-        }
-        
-        /// updates isOccupied
-        router.post("update") { (req) -> Future<Response> in
-            return try req.content["occupied"]
-                .unwrap(or: Abort(.badRequest, reason: "Missing occupied field in body"))
-                .do { isOccupied in
-                    self.bathroomOccupied = isOccupied
-                }.map(to: HTTPStatus.self) { _ in
-                    return .ok
-                }.encode(for: req)
-        }
-        
-        /// retreieves whether or not the bathroom is available
-        router.get("isAvailable") { (req) -> Future<Response>  in
-            let res: Response = Response(using: req)
-            try res.content.encode(["isOccupied":self.bathroomOccupied], as: .json)
-            return Future(res)
-        }
-        
-        /// returns the BathroomSession with the longest time
-        router.get("highScore") { (req) -> Future<BathroomSession> in
-            return req.withConnection(to: .mysql) { (db: MySQLConnection) in
-                db
-                    .query(BathroomSession.self)
-                    .max(\BathroomSession.length)
-                    .flatMap(to: BathroomSession?.self) { (maxVal) in
-                        return db
-                            .query(BathroomSession.self)
-                            .filter(\BathroomSession.length == maxVal).first()
-                    }.unwrap(or: Abort(.notFound, reason: "No BathroomSessions in DB"))
-                }
-        }
-        
-        router.get("session") { (req) -> Future<[BathroomSession]> in
-            let allSessionsFuture = BathroomSession
-                .query(on: req)
-                .all()
-            
-            allSessionsFuture.catch { print("allSesssions error: ", $0) }
-            
-            return allSessionsFuture
-        }
-        
-//        router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
-//            return try req.parameter(BathroomSession.self)
-//        }
-        
-        router.get("session", BathroomSession.parameter) { (req) -> Future<Response> in // Take in a request
-            let bathroomSession = try req.parameter(BathroomSession.self) // Turn that request into an ID
-            
-            return try bathroomSession
-                .changeName(to: "Jamie")
-                .encode(for: req) // Turn that object into a response, and return that response
-        }
-        
-//        router.delete("reservation") { (req) -> Future<Response> in
-//            return try req.content["user"]
-//                .unwrap(or: Abort(.badRequest, reason: "Missing user field in body"))
-//                .flatMap(to: HTTPStatus.self) { (userName) in
-//                    return self.deleteReservation(using: req, withName: userName)
-//                }.encode(for: req)
-//        }
-//        
-//        router.post("reservation") { (req) -> Future<Reservation> in
-//            if !self.bathroomOccupied {
+//var currentSession: BathroomSession = BathroomSession()
 //
+//var bathroomOccupied = false {
+//    didSet {
+//        if oldValue == true {
+//            currentSession.length = Date().timeIntervalSince1970 - currentSession.date.timeIntervalSince1970
+//            app.withConnection(to: .mysql) { (db) -> Future<BathroomSession> in
+//                currentSession.save(on: db).transform(to: currentSession)
+//                }.catch {
+//                    print($0)
 //            }
-//
-//                guard let userName: String = try req.content.get(at: ["user"]) else {
-//                    throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
-//                }
-//
-//                let newReservation = Reservation(user: userName)
-//
-//                return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
+//        } else {
+//            currentSession = BathroomSession()
 //        }
-        
-        router.post("reservation") { (req) -> Future<Reservation> in
-            let newReservation = Reservation(user: "Test")
-            
-            return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
-        }
-        
-        router.get("nextReservation") { (req) -> Future<Reservation> in
-            return Reservation
-                .query(on: req)
-                .sort(\Reservation.date, .ascending)
-                .first()
-                .unwrap(or: Abort(.notFound, reason: "No reservations found"))
-        }
-        
-        router.get("allReservations") { (req) -> Future<[Reservation]> in
-            return Reservation.query(on: req).all()
-        }
-        
-        router.get("firstReservation") { req in
-            return try Reservation
-                .query(on: req)
-                .first()
-                .unwrap(or: Abort(.notFound, reason: "Reservation not found"))
-                .encode(for: req)
-        }
-        
-        router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
-            let name = try req.parameter(String.self)
-            return try self.deleteReservation(using: req, withName: name)
+//    }
+//}
+
+public func routes(_ router: Router) throws {
+    router.get("hello") { req -> Future<String> in
+        return Future("Hello, world!")
+    }
+    
+    /// updates isOccupied
+    router.post("update") { (req) -> Future<Response> in
+        return try req.content[Int.self, at:"occupied"]
+            .unwrap(or: Abort(.notFound))
+            .map(to: Bool.self) { isOccupiedInt in
+                return isOccupiedInt > 0
+            }.flatMap(to: BathroomSession.self) { isOccupied in
+                if isOccupied {
+                    let newSession = BathroomSession()
+                    return newSession.save(on: req)
+                } else {
+                    return BathroomSession
+                        .query(on: req)
+                        .filter(\BathroomSession.isOpen == 0)
+                        .first()
+                        .unwrap(or: Abort(.notFound, reason: "No Open Sessions Found"))
+                        .flatMap(to: BathroomSession.self) { (session: BathroomSession) in
+                            session.isOpen = 0
+                            session.length = Date().timeIntervalSince1970 - session.date.timeIntervalSince1970
+                            return session.update(on: req)
+                    }
+                }
+            }.map(to: HTTPStatus.self) { _ in
+                return .ok
+            }.encode(for: req)
+    }
+    
+    /// retreieves whether or not the bathroom is available
+//    router.get("isAvailable") { (req) -> Future<Response>  in
+//        let res: Response = Response(using: req)
+//        try res.content.encode(["isOccupied": bathroomOccupied], as: .json)
+//        return Future(res)
+//    }
+    
+    /// returns the BathroomSession with the longest time
+    router.get("highScore") { (req) -> Future<BathroomSession> in
+        return req.withConnection(to: .mysql) { (db: MySQLConnection) in
+            db
+                .query(BathroomSession.self)
+                .max(\BathroomSession.length)
+                .flatMap(to: BathroomSession?.self) { (maxVal) in
+                    return db
+                        .query(BathroomSession.self)
+                        .filter(\BathroomSession.length == maxVal).first()
+                }.unwrap(or: Abort(.notFound, reason: "No BathroomSessions in DB"))
         }
     }
     
-    func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
+    router.get("session") { (req) -> Future<[BathroomSession]> in
+        let allSessionsFuture = BathroomSession
+            .query(on: req)
+            .all()
+        
+        allSessionsFuture.catch { print("allSesssions error: ", $0) }
+        
+        return allSessionsFuture
+    }
+    
+    //        router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
+    //            return try req.parameter(BathroomSession.self)
+    //        }
+    
+    router.get("session", BathroomSession.parameter) { (req) -> Future<Response> in // Take in a request
+        let bathroomSession = try req.parameter(BathroomSession.self) // Turn that request into an ID
+        
+        return try bathroomSession
+            .changeName(to: "Jamie")
+            .encode(for: req) // Turn that object into a response, and return that response
+    }
+    
+    //        router.delete("reservation") { (req) -> Future<Response> in
+    //            return try req.content["user"]
+    //                .unwrap(or: Abort(.badRequest, reason: "Missing user field in body"))
+    //                .flatMap(to: HTTPStatus.self) { (userName) in
+    //                    return self.deleteReservation(using: req, withName: userName)
+    //                }.encode(for: req)
+    //        }
+    //
+    //        router.post("reservation") { (req) -> Future<Reservation> in
+    //            if !self.bathroomOccupied {
+    //
+    //            }
+    //
+    //                guard let userName: String = try req.content.get(at: ["user"]) else {
+    //                    throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
+    //                }
+    //
+    //                let newReservation = Reservation(user: userName)
+    //
+    //                return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
+    //        }
+    
+    router.post("reservation") { (req) -> Future<Reservation> in
+        let newReservation = Reservation(user: "Test")
+        
+        return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
+    }
+    
+    router.get("nextReservation") { (req) -> Future<Reservation> in
         return Reservation
-            .query(on: databaseConnectable)
-            .filter(\Reservation.user == userName)
+            .query(on: req)
+            .sort(\Reservation.date, .ascending)
             .first()
-            .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
-            .delete(on: databaseConnectable)
-            .map(to: HTTPStatus.self) { _ in
-                return .ok
-            }
+            .unwrap(or: Abort(.notFound, reason: "No reservations found"))
+    }
+    
+    router.get("allReservations") { (req) -> Future<[Reservation]> in
+        return Reservation.query(on: req).all()
+    }
+    
+    router.get("firstReservation") { req in
+        return try Reservation
+            .query(on: req)
+            .first()
+            .unwrap(or: Abort(.notFound, reason: "Reservation not found"))
+            .encode(for: req)
+    }
+    
+    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
+        let name = try req.parameter(String.self)
+        return try deleteReservation(using: req, withName: name)
+    }
+}
+
+func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
+    return Reservation
+        .query(on: databaseConnectable)
+        .filter(\Reservation.user == userName)
+        .first()
+        .unwrap(or: Abort(.notFound, reason: "No reservations have been made"))
+        .delete(on: databaseConnectable)
+        .map(to: HTTPStatus.self) { _ in
+            return .ok
     }
 }
 
