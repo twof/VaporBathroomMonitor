@@ -3,7 +3,7 @@ import Vapor
 import Foundation
 import HTTP
 import FluentMySQL
-import FluentSQLite
+
 /// Register your application's routes here.
 ///
 /// [Learn More →](https://docs.vapor.codes/3.0/getting-started/structure/#routesswift)
@@ -36,7 +36,7 @@ public final class Routes: RouteCollection {
 
     /// See RouteCollection.boot
     public func boot(router: Router) throws {
-        router.get("hello") { req in
+        router.get("hello") { req -> Future<String> in
             return Future("Hello, world!")
         }
         
@@ -53,7 +53,6 @@ public final class Routes: RouteCollection {
         
         /// retreieves whether or not the bathroom is available
         router.get("isAvailable") { (req) -> Future<Response>  in
-            let ses = BathroomSession(date: Date(), length: 10)
             let res: Response = Response(using: req)
             try res.content.encode(["isOccupied":self.bathroomOccupied], as: .json)
             return Future(res)
@@ -150,10 +149,6 @@ public final class Routes: RouteCollection {
     }
     
     func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
-        final class Bar: SQLiteModel {
-            var id: Int?
-            var name: String
-        }
         return Reservation
             .query(on: databaseConnectable)
             .filter(\Reservation.user == userName)

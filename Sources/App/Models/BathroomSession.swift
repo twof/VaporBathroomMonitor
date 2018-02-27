@@ -13,10 +13,7 @@ final public class BathroomSession: Content {
     }
 }
 
-extension BathroomSession: MySQLModel, Migration {
-    public static var idKey: WritableKeyPath<BathroomSession, UUID?> {
-        return \.id
-    }
+extension BathroomSession: MySQLUUIDModel, Migration {
 }
 
 extension BathroomSession: Parameter {}

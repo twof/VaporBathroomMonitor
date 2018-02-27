@@ -13,9 +13,6 @@ public final class Reservation: Content {
     }
 }
 
-extension Reservation: MySQLModel, Migration {
-    public static var idKey: WritableKeyPath<Reservation, UUID?> {
-        return \.id
-    }
+extension Reservation: MySQLUUIDModel, Migration {
 }
 
