@@ -62,7 +62,7 @@ public func routes(_ router: Router) throws {
     router.get("isAvailable") { (req) in
         return BathroomSession
             .query(on: req)
-            .filter(\.isOngoing == 0)
+            .filter(\.isOngoing == 1)
             .first()
             .map(to: Bool.self) { (session) -> Bool in
                 return session == nil
