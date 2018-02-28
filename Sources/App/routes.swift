@@ -21,6 +21,8 @@ import FluentMySQL
 //    }
 //}
 
+extension Bool: Content {}
+
 public func routes(_ router: Router) throws {
     router.get("hello") { req -> Future<String> in
         return Future("Hello, world!")
@@ -28,37 +30,46 @@ public func routes(_ router: Router) throws {
     
     /// updates isOccupied
     router.post("update") { (req) -> Future<Response> in
-        return try req.content[Int.self, at:"occupied"]
+        return try req.content[Bool.self, at:"occupied"]
             .unwrap(or: Abort(.notFound))
-            .map(to: Bool.self) { isOccupiedInt in
-                return isOccupiedInt > 0
-            }.flatMap(to: BathroomSession.self) { isOccupied in
+            .flatMap(to: BathroomSession.self) { isOccupied in
                 if isOccupied {
-                    let newSession = BathroomSession()
-                    return newSession.save(on: req)
+                    return BathroomSession
+                        .query(on: req)
+                        .filter(\.isOngoing == 1)
+                        .first()
+                        .isNil(or: Abort(.notFound, reason: "There is already an ongoing session"))
+                        .flatMap(to: BathroomSession.self) { _ in
+                            let newSession = BathroomSession()
+                            return newSession.save(on: req)
+                        }
                 } else {
                     return BathroomSession
                         .query(on: req)
-                        .filter(\BathroomSession.isOpen == 0)
+                        .filter(\.isOngoing == 1)
                         .first()
-                        .unwrap(or: Abort(.notFound, reason: "No Open Sessions Found"))
+                        .unwrap(or: Abort(.notFound, reason: "No Ongoing Sessions Found"))
                         .flatMap(to: BathroomSession.self) { (session: BathroomSession) in
-                            session.isOpen = 0
+                            session.isOngoing = 0
                             session.length = Date().timeIntervalSince1970 - session.date.timeIntervalSince1970
                             return session.update(on: req)
                     }
                 }
-            }.map(to: HTTPStatus.self) { _ in
-                return .ok
             }.encode(for: req)
     }
     
     /// retreieves whether or not the bathroom is available
-//    router.get("isAvailable") { (req) -> Future<Response>  in
-//        let res: Response = Response(using: req)
-//        try res.content.encode(["isOccupied": bathroomOccupied], as: .json)
-//        return Future(res)
-//    }
+    router.get("isAvailable") { (req) in
+        return BathroomSession
+            .query(on: req)
+            .filter(\.isOngoing == 0)
+            .first()
+            .map(to: Bool.self) { (session) -> Bool in
+                return session == nil
+            }.map(to: [String:Bool].self) { (isAvailable) in
+                return ["isAvailable":isAvailable]
+            }
+    }
     
     /// returns the BathroomSession with the longest time
     router.get("highScore") { (req) -> Future<BathroomSession> in
@@ -75,53 +86,18 @@ public func routes(_ router: Router) throws {
     }
     
     router.get("session") { (req) -> Future<[BathroomSession]> in
-        let allSessionsFuture = BathroomSession
+        return BathroomSession
             .query(on: req)
             .all()
-        
-        allSessionsFuture.catch { print("allSesssions error: ", $0) }
-        
-        return allSessionsFuture
+            .catch { print("allSesssions error: ", $0) }
     }
     
-    //        router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
-    //            return try req.parameter(BathroomSession.self)
-    //        }
-    
-    router.get("session", BathroomSession.parameter) { (req) -> Future<Response> in // Take in a request
-        let bathroomSession = try req.parameter(BathroomSession.self) // Turn that request into an ID
+    router.get("session", BathroomSession.parameter) { (req) -> Future<Response> in
+        let bathroomSession = try req.parameter(BathroomSession.self)
         
         return try bathroomSession
             .changeName(to: "Jamie")
             .encode(for: req) // Turn that object into a response, and return that response
-    }
-    
-    //        router.delete("reservation") { (req) -> Future<Response> in
-    //            return try req.content["user"]
-    //                .unwrap(or: Abort(.badRequest, reason: "Missing user field in body"))
-    //                .flatMap(to: HTTPStatus.self) { (userName) in
-    //                    return self.deleteReservation(using: req, withName: userName)
-    //                }.encode(for: req)
-    //        }
-    //
-    //        router.post("reservation") { (req) -> Future<Reservation> in
-    //            if !self.bathroomOccupied {
-    //
-    //            }
-    //
-    //                guard let userName: String = try req.content.get(at: ["user"]) else {
-    //                    throw Abort(.badRequest, reason: "Bad JSON data. Expected string \"user\" field")
-    //                }
-    //
-    //                let newReservation = Reservation(user: userName)
-    //
-    //                return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
-    //        }
-    
-    router.post("reservation") { (req) -> Future<Reservation> in
-        let newReservation = Reservation(user: "Test")
-        
-        return Reservation.query(on: req).save(newReservation).transform(to: newReservation)
     }
     
     router.get("nextReservation") { (req) -> Future<Reservation> in
@@ -170,6 +146,22 @@ extension Future {
             })
         })
     }
+}
+
+public extension Future where Expectation: OptionalType {
+    func isNil(or error: Error) -> Future<Expectation> {
+        return self.map(to: Expectation.self) { (optional) in
+            if optional.wrapped == nil {
+                return optional
+            } else {
+                throw error
+            }
+        }
+    }
+}
+
+extension Future where T: OptionalType {
+    
 }
 
 extension QueryBuilder {
