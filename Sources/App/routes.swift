@@ -4,23 +4,6 @@ import Foundation
 import HTTP
 import FluentMySQL
 
-//var currentSession: BathroomSession = BathroomSession()
-//
-//var bathroomOccupied = false {
-//    didSet {
-//        if oldValue == true {
-//            currentSession.length = Date().timeIntervalSince1970 - currentSession.date.timeIntervalSince1970
-//            app.withConnection(to: .mysql) { (db) -> Future<BathroomSession> in
-//                currentSession.save(on: db).transform(to: currentSession)
-//                }.catch {
-//                    print($0)
-//            }
-//        } else {
-//            currentSession = BathroomSession()
-//        }
-//    }
-//}
-
 extension Bool: Content {}
 
 public func routes(_ router: Router) throws {
@@ -36,7 +19,7 @@ public func routes(_ router: Router) throws {
                 if isOccupied {
                     return BathroomSession
                         .query(on: req)
-                        .filter(\.isOngoing == 1)
+                        .filter(\.isOngoing == true)
                         .first()
                         .isNil(or: Abort(.notFound, reason: "There is already an ongoing session"))
                         .flatMap(to: BathroomSession.self) { _ in
@@ -46,11 +29,11 @@ public func routes(_ router: Router) throws {
                 } else {
                     return BathroomSession
                         .query(on: req)
-                        .filter(\.isOngoing == 1)
+                        .filter(\.isOngoing == true)
                         .first()
                         .unwrap(or: Abort(.notFound, reason: "No Ongoing Sessions Found"))
                         .flatMap(to: BathroomSession.self) { (session: BathroomSession) in
-                            session.isOngoing = 0
+                            session.isOngoing = false
                             session.length = Date().timeIntervalSince1970 - session.date.timeIntervalSince1970
                             return session.update(on: req)
                     }
@@ -62,7 +45,7 @@ public func routes(_ router: Router) throws {
     router.get("isAvailable") { (req) in
         return BathroomSession
             .query(on: req)
-            .filter(\.isOngoing == 1)
+            .filter(\.isOngoing == true)
             .first()
             .map(to: Bool.self) { (session) -> Bool in
                 return session == nil

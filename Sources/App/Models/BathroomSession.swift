@@ -6,9 +6,9 @@ final public class BathroomSession: Content, MySQLUUIDModel, Migration, Paramete
     public var id: UUID?
     public var date: Date
     public var length: Double
-    public var isOngoing: Int // Using a int instead of a bool because mysql is missing support for Bools at the moment
+    public var isOngoing: Bool
     
-    init(date: Date=Date(), length: Double=0, isOngoing: Int=1) {
+    init(date: Date=Date(), length: Double=0, isOngoing: Bool=true) {
         self.date = date
         self.length = length
         self.isOngoing = isOngoing
