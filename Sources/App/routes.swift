@@ -92,12 +92,10 @@ public func routes(_ router: Router) throws {
             .catch { print("allSesssions error: ", $0) }
     }
     
-    router.get("session", BathroomSession.parameter) { (req) -> Future<Response> in
+    router.get("session", BathroomSession.parameter) { (req) -> Future<BathroomSession> in
         let bathroomSession = try req.parameter(BathroomSession.self)
         
-        return try bathroomSession
-            .changeName(to: "Jamie")
-            .encode(for: req) // Turn that object into a response, and return that response
+        return bathroomSession
     }
     
     router.get("nextReservation") { (req) -> Future<Reservation> in
