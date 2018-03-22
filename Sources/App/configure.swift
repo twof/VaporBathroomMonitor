@@ -15,18 +15,23 @@ public func configure(
     services.register(router, as: Router.self)
     
     try services.register(EngineServerConfig.detect())
+    
     try services.register(FluentMySQLProvider())
-    
+
     var databaseConfig = DatabaseConfig()
-    let db: MySQLDatabase   
-    
-    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
-        let database = MySQLDatabase(databaseURL: databaseURL) {
-        db = database
-    } else {
-        let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
-        db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
-    }
+    var db: MySQLDatabase
+    let dbConfig: MySQLDatabaseConfig
+
+//    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
+//        let databaseConfig = MySQLDatabaseConfig(
+//        let database = MySQLDatabase(config: databaseURL) {
+//        db = database
+//    } else {
+    let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
+
+    dbConfig = MySQLDatabaseConfig(hostname: host, port: 3306, username: username, password: password, database: database)
+    db = MySQLDatabase(config: dbConfig)
+//    }
 
     databaseConfig.add(database: db, as: .mysql)
     services.register(databaseConfig)
@@ -35,10 +40,4 @@ public func configure(
     migrationConfig.add(model: BathroomSession.self, database: .mysql)
     migrationConfig.add(model: Reservation.self, database: .mysql)
     services.register(migrationConfig)
-}
-
-extension DatabaseIdentifier {
-    static var mysql: DatabaseIdentifier<MySQLDatabase> {
-        return .init("mysql")
-    }
 }

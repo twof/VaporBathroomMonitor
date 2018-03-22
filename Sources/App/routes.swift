@@ -7,8 +7,8 @@ import FluentMySQL
 extension Bool: Content {}
 
 public func routes(_ router: Router) throws {
-    router.get("hello") { req -> Future<String> in
-        return Future("Hello, world!")
+    router.get("hello") { req in
+        return "Hello, world!"
     }
     
     /// updates isOccupied
@@ -17,7 +17,7 @@ public func routes(_ router: Router) throws {
             .unwrap(or: Abort(.notFound))
             .flatMap(to: BathroomSession.self) { isOccupied in
                 if isOccupied {
-                    return BathroomSession
+                    return try BathroomSession
                         .query(on: req)
                         .filter(\.isOngoing == true)
                         .first()
@@ -27,7 +27,7 @@ public func routes(_ router: Router) throws {
                             return newSession.save(on: req)
                         }
                 } else {
-                    return BathroomSession
+                    return try BathroomSession
                         .query(on: req)
                         .filter(\.isOngoing == true)
                         .first()
@@ -43,7 +43,7 @@ public func routes(_ router: Router) throws {
     
     /// retreieves whether or not the bathroom is available
     router.get("isAvailable") { (req) in
-        return BathroomSession
+        return try BathroomSession
             .query(on: req)
             .filter(\.isOngoing == true)
             .first()
@@ -57,11 +57,11 @@ public func routes(_ router: Router) throws {
     /// returns the BathroomSession with the longest time
     router.get("highScore") { (req) -> Future<BathroomSession> in
         return req.withConnection(to: .mysql) { (db: MySQLConnection) in
-            db
+            try db
                 .query(BathroomSession.self)
                 .max(\BathroomSession.length)
                 .flatMap(to: BathroomSession?.self) { (maxVal) in
-                    return db
+                    return try db
                         .query(BathroomSession.self)
                         .filter(\BathroomSession.length == maxVal).first()
                 }.unwrap(or: Abort(.notFound, reason: "No BathroomSessions in DB"))
@@ -81,34 +81,53 @@ public func routes(_ router: Router) throws {
         return bathroomSession
     }
     
-    router.get("nextReservation") { (req) -> Future<Reservation> in
-        return Reservation
+    router.post(Reservation.PublicIncomingReservation.self, at: "reservation") { (req, pubReservation) -> Future<Reservation> in
+       
+        let abortReason = "\(pubReservation.user) already has an open reservation"
+        let potentialError = Abort(.notFound, reason: abortReason)
+        
+        return try Reservation
             .query(on: req)
+            .filter(\.isInQueue == true)
+            .filter(\.user == pubReservation.user)
+            .first()
+            .isNil(or: potentialError)
+            .flatMap(to: Reservation.self) { _ in
+                return pubReservation.toReservation().save(on: req)
+            }
+    }
+    
+    router.get("nextReservation") { (req) -> Future<Reservation> in
+        return try Reservation
+            .query(on: req)
+            .filter(\.isInQueue == true)
             .sort(\Reservation.date, .ascending)
             .first()
             .unwrap(or: Abort(.notFound, reason: "No reservations found"))
     }
     
-    router.get("allReservations") { (req) -> Future<[Reservation]> in
+    router.put("reservation", Reservation.parameter, "fulfill") { (req) -> Future<Reservation> in
+        let reservation = try req.parameter(Reservation.self)
+        
+        return reservation.map(to: Reservation.self) { (res) in
+            let updated = res
+            updated.isInQueue = false
+            return updated
+        }.update(on: req)
+    }
+    
+    router.get("reservation") { (req) -> Future<[Reservation]> in
         return Reservation.query(on: req).all()
     }
     
-    router.get("firstReservation") { req in
-        return try Reservation
-            .query(on: req)
-            .first()
-            .unwrap(or: Abort(.notFound, reason: "Reservation not found"))
-            .encode(for: req)
-    }
-    
-    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
-        let name = try req.parameter(String.self)
-        return try deleteReservation(using: req, withName: name)
-    }
+//    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
+//        let name = try req.parameter(String.self)
+//        return try deleteReservation(using: req, withName: name)
+//    }
 }
 
 func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
-    return Reservation
+    return try Reservation
         .query(on: databaseConnectable)
         .filter(\Reservation.user == userName)
         .first()
@@ -206,51 +225,10 @@ public extension Future where T == Bool {
     }
 }
 
-//func registerUser(_ req: Request) throws -> Future<User.PublicUser> {
-//    return try req.content
-//        .decode(RegisterRequest.self)
-//        .flatMap(to: User.PublicUser.self) { registerRequest in
-//            let userExistsError = Abort(.badRequest, reason: "User exists!", identifier: "Whoops")
-//
-//            return User.query(on: req)
-//                .filter(\.email == registerRequest.email)
-//                .count()
-//                .assertEquals(0)
-//                .guard(elseThrow: userExistsError)
-//                .saveUserWith(
-//                    name: registerRequest.name,
-//                    email: registerRequest.email,
-//                    password: registerRequest.password,
-//                    on: req
-//                ).map(to: Token.self) { newUser in
-//                    print(newUser.id)
-//                }
-//    }
-//}
-
-
-//extension Future {
-//    public func saveUserWith(
-//        name: String,
-//        email: String,
-//        password: String,
-//        on connectable: DatabaseConnectable
-//    ) -> Future<User.PublicUser> {
-//        let hasher = try req.make(BCryptHasher.self)
-//        let hashedPassword = try hasher.make(password)
-//
-//        let newUser = User(name: name, email: email, password: hashedPassword)
-//        try connectable.authenticate(newUser)
-//        return newUser.save(on: req).map(to: User.PublicUser.self){ aUser in
-//            return try aUser.publicUser(token: "test")
-//        }
-//    }
-//}
-
 /// Create a new reservation if one doesn't already exist belonging to that user
 func create(_ req: Request) throws -> Future<Reservation> {
     return try req.content.decode(Reservation.self).flatMap(to: Reservation.self) { reservation in
-        return Reservation
+        return try Reservation
             .doesUserExist(named: reservation.user, on: req)
             .then(
                 save: reservation,
@@ -273,15 +251,6 @@ extension Future where T == Bool{
 
 extension String: Error {}
 
-extension Future {
-    func testThrows() throws -> Future<T> {
-        if 1 != 1 {
-            throw "This is a test error"
-        }
-        return self
-    }
-}
-
 extension Content {
     public func json() throws -> Data {
         let encoder = JSONEncoder()
@@ -299,8 +268,8 @@ extension Future where T: Model, T.Database: QuerySupporting {
 }
 
 extension Reservation {
-    public static func doesUserExist(named user: String, on connectable: DatabaseConnectable) -> Future<Bool> {
-        return query(on: connectable)
+    public static func doesUserExist(named user: String, on connectable: DatabaseConnectable) throws -> Future<Bool> {
+        return try query(on: connectable)
             .filter(\Reservation.user == user)
             .first()
             .map(to: Bool.self) { (user) in

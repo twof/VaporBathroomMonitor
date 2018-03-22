@@ -2,7 +2,7 @@ import Foundation
 import FluentMySQL
 import Vapor
 
-final public class BathroomSession: Content, MySQLUUIDModel, Migration, Parameter  {
+final public class BathroomSession: Content, MySQLUUIDModel, Migration, Parameter {
     public var id: UUID?
     public var date: Date
     public var length: Double
