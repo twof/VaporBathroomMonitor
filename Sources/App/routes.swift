@@ -120,6 +120,11 @@ public func routes(_ router: Router) throws {
         return Reservation.query(on: req).all()
     }
     
+    router.get("test") { (req) -> [String: String] in
+        let dict = ["hello": "world"]
+        return dict
+    }
+    
 //    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
 //        let name = try req.parameter(String.self)
 //        return try deleteReservation(using: req, withName: name)

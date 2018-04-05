@@ -2,6 +2,24 @@ import Vapor
 import FluentMySQL
 import Foundation
 
+extension MySQLDatabaseConfig {
+    /// Initialize MySQLDatabase with a DB URL
+    public init?(_ databaseURL: String) {
+        guard let url = URL(string: databaseURL),
+            url.scheme == "mysql",
+            url.pathComponents.count == 2,
+            let hostname = url.host,
+            let username = url.user,
+            let port = url.port
+            else {return nil}
+        
+        let password = url.password
+        let database = url.pathComponents[1]
+        self.init(hostname: hostname, port: port, username: username, password: password, database: database)
+    }
+
+}
+
 /// Called before your application initializes.
 ///
 /// [Learn More →](https://docs.vapor.codes/3.0/getting-started/structure/#configureswift)
@@ -14,26 +32,25 @@ public func configure(
     try routes(router)
     services.register(router, as: Router.self)
     
-    try services.register(EngineServerConfig.detect())
+    services.register(EngineServerConfig.default())
     
     try services.register(FluentMySQLProvider())
 
     var databaseConfig = DatabaseConfig()
     var db: MySQLDatabase
-    let dbConfig: MySQLDatabaseConfig
 
-//    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
-//        let databaseConfig = MySQLDatabaseConfig(
-//        let database = MySQLDatabase(config: databaseURL) {
-//        db = database
-//    } else {
-    let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
+    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
+        let databaseConfig = MySQLDatabaseConfig(databaseURL){
+        db = MySQLDatabase(config: databaseConfig)
+    } else {
+        let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
 
-    dbConfig = MySQLDatabaseConfig(hostname: host, port: 3306, username: username, password: password, database: database)
-    db = MySQLDatabase(config: dbConfig)
-//    }
+        let dbConfig = MySQLDatabaseConfig(hostname: host, port: 3306, username: username, password: password, database: database)
+        db = MySQLDatabase(config: dbConfig)
+    }
 
     databaseConfig.add(database: db, as: .mysql)
+    databaseConfig.enableLogging(on: .mysql)
     services.register(databaseConfig)
     
     var migrationConfig = MigrationConfig()
