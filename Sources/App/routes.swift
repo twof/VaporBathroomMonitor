@@ -126,6 +126,10 @@ public func routes(_ router: Router) throws {
     }
 
     let slackGroup = router.grouped("slack")
+    slackGroup.post("available") { (req) -> String in
+        let slashCommand = try? req.content.syncDecode(SlashCommand.self)
+        return "hello"
+    }
 
     slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> SlashCommandResponse in
         guard ProcessInfo.processInfo.environment["SLACK_VERIFICATION_TOKEN"] == command.token
@@ -133,11 +137,6 @@ public func routes(_ router: Router) throws {
 
         return SlashCommandResponse(responseType: .ephemeral, text: "Yes it is!")
     }
-    
-//    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
-//        let name = try req.parameter(String.self)
-//        return try deleteReservation(using: req, withName: name)
-//    }
 }
 
 func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
