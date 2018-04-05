@@ -55,7 +55,7 @@ public func configure(
     databaseConfig.add(database: db, as: .mysql)
     databaseConfig.enableLogging(on: .mysql)
     services.register(databaseConfig)
-    
+
     var migrationConfig = MigrationConfig()
     migrationConfig.add(model: BathroomSession.self, database: .mysql)
     migrationConfig.add(model: Reservation.self, database: .mysql)
