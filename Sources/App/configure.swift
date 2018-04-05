@@ -9,13 +9,12 @@ extension MySQLDatabaseConfig {
             url.scheme == "mysql",
             url.pathComponents.count == 2,
             let hostname = url.host,
-            let username = url.user,
-            let port = url.port
+            let username = url.user
             else {return nil}
         
         let password = url.password
         let database = url.pathComponents[1]
-        self.init(hostname: hostname, port: port, username: username, password: password, database: database)
+        self.init(hostname: hostname, username: username, password: password, database: database)
     }
 
 }
@@ -39,8 +38,8 @@ public func configure(
     var databaseConfig = DatabaseConfig()
     var db: MySQLDatabase
 
-    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
-        let databaseConfig = MySQLDatabaseConfig(databaseURL){
+    if let databaseURL = ProcessInfo.processInfo.environment["CLEARDB_DATABASE_URL"],
+        let databaseConfig = MySQLDatabaseConfig(databaseURL) {
         db = MySQLDatabase(config: databaseConfig)
     } else {
         let (username, password, host, database) = ("root", "pass", "localhost", "bathroom")
