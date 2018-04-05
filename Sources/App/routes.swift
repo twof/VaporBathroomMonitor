@@ -124,6 +124,13 @@ public func routes(_ router: Router) throws {
         let dict = ["hello": "world"]
         return dict
     }
+
+    let slackGroup = router.grouped("slack")
+
+    slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> String in
+        
+        return "hello"
+    }
     
 //    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
 //        let name = try req.parameter(String.self)

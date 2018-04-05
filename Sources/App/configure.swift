@@ -20,9 +20,7 @@ extension MySQLDatabaseConfig {
         } else {
             self.init(hostname: hostname, username: username, password: password, database: database)
         }
-        
     }
-
 }
 
 /// Called before your application initializes.
