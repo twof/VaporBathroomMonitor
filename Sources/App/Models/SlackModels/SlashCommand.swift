@@ -22,15 +22,15 @@ struct SlashCommand: Content {
     let token: String
     let teamId: String
     let teamDomain: String
-    let enterpriseId: String
-    let enterpriseName: String
+    let enterpriseId: String?
+    let enterpriseName: String?
     let channelId: String
     let channelName: String
     let userId: String
     let userName: String
     let command: String
     let text: String
-    let responseURL: URL
+    let responseURL: String
     let triggerId: String
 
     enum CodingKeys: String, CodingKey {

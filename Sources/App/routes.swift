@@ -126,18 +126,28 @@ public func routes(_ router: Router) throws {
     }
 
     let slackGroup = router.grouped("slack")
-    slackGroup.post("available") { (req) -> String in
-        print(req.http.body.description)
-        let slashCommand = try? req.content.syncDecode(SlashCommand.self)
-        return "hello"
-    }
-
-//    slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> SlashCommandResponse in
-//        guard ProcessInfo.processInfo.environment["SLACK_VERIFICATION_TOKEN"] == command.token
-//            else { throw Abort(HTTPResponseStatus.unauthorized) }
-//
-//        return SlashCommandResponse(responseType: .ephemeral, text: "Yes it is!")
+//    slackGroup.post("available") { (req) -> String in
+//        print(req.http.body.description)
+//        let slashCommand = try req.content.syncDecode(SlashCommand.self)
+//        return "hello"
 //    }
+
+    slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> Future<SlashCommandResponse> in
+        guard ProcessInfo.processInfo.environment["SLACK_VERIFICATION_TOKEN"] == command.token
+            else { throw Abort(HTTPResponseStatus.unauthorized) }
+
+        return try BathroomSession
+            .query(on: req)
+            .filter(\.isOngoing == true)
+            .first()
+            .map(to: Bool.self) { (session) -> Bool in
+                return session == nil
+            }.map(to: SlashCommandResponse.self) { (isAvailable) in
+                return (isAvailable)
+                    ? SlashCommandResponse(responseType: .ephemeral, text: "The bathroom is available")
+                    : SlashCommandResponse(responseType: .ephemeral, text: "The bathroom is not available")
+        }
+    }
 }
 
 func deleteReservation(using databaseConnectable: DatabaseConnectable, withName userName: String) throws -> Future<HTTPStatus> {
