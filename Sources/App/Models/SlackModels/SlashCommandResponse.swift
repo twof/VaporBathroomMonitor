@@ -17,7 +17,7 @@ enum SlashCommandResponseType: String, Content {
     case ephemeral
 }
 
-class SlashCommandResponse: Content {
+public struct SlashCommandResponse: Content {
     let responseType: SlashCommandResponseType
     let text: String
 

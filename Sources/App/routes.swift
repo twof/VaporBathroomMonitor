@@ -127,9 +127,11 @@ public func routes(_ router: Router) throws {
 
     let slackGroup = router.grouped("slack")
 
-    slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> String in
-        
-        return "hello"
+    slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> SlashCommandResponse in
+        guard ProcessInfo.processInfo.environment["SLACK_VERIFICATION_TOKEN"] == command.token
+            else { throw Abort(HTTPResponseStatus.unauthorized) }
+
+        return SlashCommandResponse(responseType: .ephemeral, text: "Yes it is!")
     }
     
 //    router.delete("reservation", String.parameter) { (req) -> Future<HTTPStatus> in
