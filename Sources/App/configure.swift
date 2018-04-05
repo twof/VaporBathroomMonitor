@@ -14,7 +14,13 @@ extension MySQLDatabaseConfig {
         
         let password = url.password
         let database = url.pathComponents[1]
-        self.init(hostname: hostname, username: username, password: password, database: database)
+       
+        if let port = url.port {
+            self.init(hostname: hostname, port: port, username: username, password: password, database: database)
+        } else {
+            self.init(hostname: hostname, username: username, password: password, database: database)
+        }
+        
     }
 
 }
@@ -38,7 +44,7 @@ public func configure(
     var databaseConfig = DatabaseConfig()
     var db: MySQLDatabase
 
-    if let databaseURL = ProcessInfo.processInfo.environment["CLEARDB_DATABASE_URL"],
+    if let databaseURL = ProcessInfo.processInfo.environment["JAWSDB_URL"],
         let databaseConfig = MySQLDatabaseConfig(databaseURL) {
         db = MySQLDatabase(config: databaseConfig)
     } else {
