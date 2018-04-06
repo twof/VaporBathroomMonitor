@@ -15,7 +15,7 @@ public func routes(_ router: Router) throws {
     router.post("update") { (req) -> Future<Response> in
         return try req.content[Bool.self, at:"occupied"]
             .unwrap(or: Abort(.notFound))
-            .flatMap(to: BathroomSession.self) { isOccupied in
+            .flatMap(to: Response.self) { isOccupied in
                 if isOccupied {
                     return try BathroomSession
                         .query(on: req)
@@ -25,7 +25,7 @@ public func routes(_ router: Router) throws {
                         .flatMap(to: BathroomSession.self) { _ in
                             let newSession = BathroomSession()
                             return newSession.save(on: req)
-                        }
+                        }.encode(for: req)
                 } else {
                     return try BathroomSession
                         .query(on: req)
@@ -36,9 +36,46 @@ public func routes(_ router: Router) throws {
                             session.isOngoing = false
                             session.length = Date().timeIntervalSince1970 - session.date.timeIntervalSince1970
                             return session.update(on: req)
-                    }
+                        }.flatMap(to: Reservation.self) { (_) in
+                            return try Reservation
+                                .query(on: req)
+                                .filter(\Reservation.isInQueue == true)
+                                .sort(\Reservation.date, .ascending)
+                                .first()
+                                .unwrap(or: Abort(.notFound, reason: "No reservations found"))
+                        }.map(to: Reservation.self) { (res) in
+                            let updated = res
+                            updated.isInQueue = false
+                            return updated
+                        }.update(on: req)
+                        .flatMap(to: Reservation.self) { reservation in
+                            guard let botToken = ProcessInfo.processInfo.environment["BOT_TOKEN"]
+                                else { throw Abort(.notFound) }
+
+                            let client = try req.make(Client.self)
+
+                            struct OpenConversationParams: Content {
+                                let token: String
+                                let userId: String
+
+                                enum CodingKeys: String, CodingKey {
+                                    case token
+                                    case userId = "users"
+                                }
+                            }
+
+                            let params = OpenConversationParams(token: botToken, userId: reservation.user)
+
+                            return client
+                                .post("https://slack.com/api/conversations.open", content: params)
+                                .map { response in
+                                    let real = response.http.body
+                                    print(real)
+                                }
+                                .transform(to: reservation)
+                        }.encode(for: req)
                 }
-            }.encode(for: req)
+            }
     }
     
     /// retreieves whether or not the bathroom is available
@@ -138,6 +175,12 @@ public func routes(_ router: Router) throws {
             .map(to: String.self) { _ in
                 return "Welcome to the queue! You'll be notified when a bathroom is available"
             }
+    }
+
+    slackGroup.get("auth") { (req) -> String in
+        let client = try req.make(Client.self)
+        client.get(URLRepresentable)
+        return "Hello"
     }
 }
 
