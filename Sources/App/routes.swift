@@ -81,21 +81,7 @@ public func routes(_ router: Router) throws {
         return bathroomSession
     }
     
-    router.post(Reservation.PublicIncomingReservation.self, at: "reservation") { (req, pubReservation) -> Future<Reservation> in
-       
-        let abortReason = "\(pubReservation.user) already has an open reservation"
-        let potentialError = Abort(.notFound, reason: abortReason)
-        
-        return try Reservation
-            .query(on: req)
-            .filter(\.isInQueue == true)
-            .filter(\.user == pubReservation.user)
-            .first()
-            .isNil(or: potentialError)
-            .flatMap(to: Reservation.self) { _ in
-                return pubReservation.toReservation().save(on: req)
-            }
-    }
+    router.post(Reservation.PublicIncomingReservation.self, at: "reservation", use: ReservationController.saveReservation)
     
     router.get("nextReservation") { (req) -> Future<Reservation> in
         return try Reservation
@@ -126,11 +112,6 @@ public func routes(_ router: Router) throws {
     }
 
     let slackGroup = router.grouped("slack")
-//    slackGroup.post("available") { (req) -> String in
-//        print(req.http.body.description)
-//        let slashCommand = try req.content.syncDecode(SlashCommand.self)
-//        return "hello"
-//    }
 
     slackGroup.post(SlashCommand.self, at: "available") { (req, command) -> Future<SlashCommandResponse> in
         guard ProcessInfo.processInfo.environment["SLACK_VERIFICATION_TOKEN"] == command.token
@@ -147,6 +128,16 @@ public func routes(_ router: Router) throws {
                     ? SlashCommandResponse(responseType: .ephemeral, text: "The bathroom is available")
                     : SlashCommandResponse(responseType: .ephemeral, text: "The bathroom is not available")
         }
+    }
+
+    slackGroup.post(SlashCommand.self, at: "queue") { (req, command) -> Future<String> in
+        let newReservation = Reservation.PublicIncomingReservation(user: command.userId)
+
+        return try ReservationController
+            .saveReservation(req: req, pubReservation: newReservation)
+            .map(to: String.self) { _ in
+                return "Welcome to the queue! You'll be notified when a bathroom is available"
+            }
     }
 }
 
