@@ -6,14 +6,19 @@ import FluentMySQL
 
 extension Bool: Content {}
 
+//extension FoundationClient {
+//    public func get() {
+//    }
+//}
+
 public func routes(_ router: Router) throws {
     router.get("hello") { req in
         return "Hello, world!"
     }
 
     router.post("update") { (req) -> Future<Response> in
-        return req.content[Bool.self, at:"occupied"]
-            .unwrap(or: Abort(.notFound, reason: "Could not understand input"))
+        return try req.content[Bool.self, at:"occupied"]
+            .unwrap(or: Abort(.notFound, reason: "Bad input. Looking for {\"occupied\":bool}"))
             .flatMap(to: Response.self) { isOccupied in
                 if isOccupied {
                     return try BathroomSession
@@ -35,7 +40,7 @@ public func routes(_ router: Router) throws {
                             session.isOngoing = false
                             session.length = Date().timeIntervalSince1970 - session.date.timeIntervalSince1970
                             return session.update(on: req)
-                        }.flatMap(to: Reservation.self) { (_) in
+                        }.flatMap(to: Reservation.self) { _ in
                             return try Reservation
                                 .query(on: req)
                                 .filter(\Reservation.isInQueue == true)
@@ -47,32 +52,35 @@ public func routes(_ router: Router) throws {
                             updated.isInQueue = false
                             return updated
                         }.update(on: req)
-                        .flatMap(to: Reservation.self) { reservation in
-                            guard let botToken = ProcessInfo.processInfo.environment["BOT_TOKEN"]
+                        .flatMap(to: String.self) { reservation in
+                            guard let botToken = ProcessInfo.processInfo.environment["SLACK_BOT_TOKEN"]
                                 else { throw Abort(.notFound) }
 
                             let client = try req.make(Client.self)
 
                             struct OpenConversationParams: Content {
+                                static var defaultMediaType: MediaType = .urlEncodedForm
+                                
                                 let token: String
                                 let userId: String
 
                                 enum CodingKeys: String, CodingKey {
                                     case token
-                                    case userId = "users"
+                                    case userId = "user"
                                 }
                             }
 
                             let params = OpenConversationParams(token: botToken, userId: reservation.user)
 
                             return client
-                                .post("https://slack.com/api/conversations.open", content: params)
-                                .map { response in
-                                    let real = response.http.body
-                                    print(real)
+                                .post("https://slack.com/api/im.open", content: params)
+                                .map(to: String.self) { response in
+                                    let channel = try response.content.syncGet(String.self, at: "channel", "id")
+                                    return channel
                                 }
-                                .transform(to: reservation)
-                        }.encode(for: req)
+                        }.flatMap(to: Response.self) { channel in
+                            return try sendSlackMessage(on: req, message: "The restroom is ready for you", channel: channel)
+                        }
                 }
             }
     }
@@ -175,11 +183,55 @@ public func routes(_ router: Router) throws {
                 return "Welcome to the queue! You'll be notified when a bathroom is available"
             }
     }
+}
 
-    slackGroup.get("auth") { (req) -> String in
-        let client = try req.make(Client.self)
-        client.get(URLRepresentable)
-        return "Hello"
+func sendSlackMessage(on request: Request, message: String, channel: String) throws -> Future<Response> {
+    struct SendMessageParams: Content {
+        static var defaultMediaType: MediaType = .urlEncodedForm
+        
+        let token: String
+        let channel: String
+        let text: String
+        let asUser: Bool
+        
+        enum CodingKeys: String, CodingKey {
+            case token
+            case channel
+            case text
+            case asUser = "as_user"
+        }
+    }
+    
+    guard let botToken = ProcessInfo.processInfo.environment["SLACK_BOT_TOKEN"]
+        else { throw Abort(.notFound) }
+    let client = try request.make(Client.self)
+    
+    let sendMessageParams = SendMessageParams(
+        token: botToken,
+        channel: channel,
+        text: message,
+        asUser: true
+    )
+    
+    return client
+        .post("https://slack.com/api/chat.postMessage", content: sendMessageParams)
+        .map { resp in
+            print(resp)
+            return resp
+    }
+}
+
+extension Client {
+    func get<T: Content>(_ url: URLRepresentable, query: T, headers: HTTPHeaders = .init()) -> Future<Response> {
+        let queryMirror = Mirror(reflecting: query)
+        let url = "\(url)?"
+        var queryStrings = [String]()
+        
+        for child in queryMirror.children {
+            queryStrings.append("\(child.label!)=\(child.value)")
+        }
+        
+        return self.get("\(url)\(queryStrings.joined(separator: "&"))", headers: headers)
     }
 }
 
