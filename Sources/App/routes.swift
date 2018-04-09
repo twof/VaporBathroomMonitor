@@ -10,11 +10,10 @@ public func routes(_ router: Router) throws {
     router.get("hello") { req in
         return "Hello, world!"
     }
-    
-    /// updates isOccupied
+
     router.post("update") { (req) -> Future<Response> in
-        return try req.content[Bool.self, at:"occupied"]
-            .unwrap(or: Abort(.notFound))
+        return req.content[Bool.self, at:"occupied"]
+            .unwrap(or: Abort(.notFound, reason: "Could not understand input"))
             .flatMap(to: Response.self) { isOccupied in
                 if isOccupied {
                     return try BathroomSession
